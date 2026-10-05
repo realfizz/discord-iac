@@ -1,0 +1,66 @@
+#!/bin/sh
+set -eu
+
+ok=0
+
+say() {
+  printf '%s: %s\n' "$1" "$2"
+}
+
+val() {
+  key=$1
+  eval "cur=\${$key:-}"
+  if [ -n "$cur" ]; then
+    printf '%s' "$cur"
+    return
+  fi
+  if [ -f .env ]; then
+    line=$(grep -E "^${key}=" .env | head -n 1 || true)
+    if [ -n "$line" ]; then
+      printf '%s' "$line" | cut -d= -f2- | tr -d '"' | tr -d "'"
+    fi
+  fi
+}
+
+if command -v tofu >/dev/null 2>&1; then
+  say tofu yes
+elif command -v terraform >/dev/null 2>&1; then
+  say tofu "no, terraform is installed"
+else
+  say tofu no
+  ok=1
+fi
+
+token=$(val DISCORD_TOKEN || true)
+server=$(val DISCORD_SERVER_ID || true)
+if [ -z "$server" ]; then
+  server=$(val TF_VAR_server_id || true)
+fi
+
+if [ -n "$token" ]; then
+  say token set
+else
+  say token missing
+  ok=1
+fi
+
+if [ -n "$server" ]; then
+  say server set
+else
+  say server missing
+  ok=1
+fi
+
+if [ -n "$token" ] && [ -n "$server" ]; then
+  code=$(curl -s -o /dev/null -w '%{http_code}' \
+    -H "Authorization: Bot ${token}" \
+    -H "User-Agent: discord-iac-doctor" \
+    "https://discord.com/api/v10/guilds/${server}")
+  case "$code" in
+    200) say bot "in server" ;;
+    401) say bot "token rejected"; ok=1 ;;
+    *) say bot "cannot see server ($code)"; ok=1 ;;
+  esac
+fi
+
+exit "$ok"

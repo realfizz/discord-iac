@@ -1,8 +1,8 @@
 # discord-iac
 
-<img src=".github/banner.png" alt="discord-iac" width="100%">
-
 A skill for managing a Discord server as Terraform
+
+<img src=".github/banner.png" alt="discord-iac" width="100%">
 
 We use the following Terraform provider: [`kirchdev/discord`](https://registry.terraform.io/providers/kirchDev/discord/0.10.1).
 
